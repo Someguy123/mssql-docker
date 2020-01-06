@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+#########
+#
+# DSN Auto-Installer Script for someguy123/mssql
+# github.com/Someguy123/mssql-docker
+#
+# License: MIT / X11
+#
+#########
+
+. /opt/sg-mssql/colors.sh
+
+: ${MS_DRIVER_INI="/etc/odbcinst.ini"}
+: ${DSN_FOLDER="/opt/sg-mssql/dsns"}
+
+MS_DRIVER=$(sed -rn "s/^\[([a-zA-Z0-9_ -]+)\]/\1/p" "$MS_DRIVER_INI")
+
+msg
+msg cyan "################################################"
+msg cyan "#                                              #"
+msg cyan "#          DSN Auto-Installer Script           #"
+msg cyan "#                                              #"
+msg cyan "#          Designed for Docker image:          #"
+msg cyan "#               someguy123/mssql               #"
+msg cyan "#                                              #"
+msg cyan "################################################"
+msg cyan "#                                              #"
+msg cyan "#      Source Code:                            #"
+msg cyan "#      github.com/Someguy123/mssql-docker      #"
+msg cyan "#                                              #"
+msg cyan "#      License: MIT / X11                      #"
+msg cyan "#                                              #"
+msg cyan "#      (C) 2020 Someguy123                     #"
+msg cyan "#                                              #"
+msg cyan "################################################\n"
+
+
+echo -e "\n----------------------------------------------------------------------------\n"
+msg magenta " [Driver INI]:             \t${BOLD}${MS_DRIVER_INI}"
+msg magenta " [Detected Driver Name]:   \t${BOLD}${MS_DRIVER}"
+msg magenta " [DSN Folder]:             \t${BOLD}${DSN_FOLDER}"
+echo -e "\n----------------------------------------------------------------------------\n"
+
+msg yellow " [...] Scanning folder '${DSN_FOLDER}' for DSN files to install..."
+
+echo -e "\n----------------------------------------------------------------------------\n"
+
+
+if [ -z "$(ls -A "$DSN_FOLDER")" ]; then
+    >&2 msg bold red " [!!!] Folder $DSN_FOLDER is empty. No DSNs to install..."
+    exit 1
+fi
+
+set -eu
+
+for f in "$DSN_FOLDER"/*; do
+    filled=$(mktemp)
+    
+    msg cyan " >>> Filling placeholders in file $f and outputting to $filled"
+    sed -r "s/MS_DRIVER/$MS_DRIVER/" "$f" > "$filled"
+
+    msg cyan " >>> Installing DSN $f (using tmp file $filled)"
+    odbcinst -i -s -f "$filled" -l
+    msg bold green " [+++] Successfully installed DSN file ${f} (using tmp file $filled)\n\n"
+    rm "$filled"
+done
+
+echo -e "\n----------------------------------------------------------------------------\n"
+
+msg bold green " [+++] Finished installing DSN files from $DSN_FOLDER"
+
+
